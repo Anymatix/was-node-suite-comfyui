@@ -7076,11 +7076,12 @@ class WAS_Image_Save:
                 "extension": (['png', 'jpg', 'jpeg', 'gif', 'tiff', 'webp', 'bmp'], ),
                 "quality": ("INT", {"default": 100, "min": 1, "max": 100, "step": 1}),
                 "lossless_webp": (["false", "true"],),
-                "overwrite_mode": (["false", "prefix_as_filename"],),
+                "overwrite_mode": (["false","true", "prefix_as_filename"],),
                 "show_history": (["false", "true"],),
                 "show_history_by_prefix": (["true", "false"],),
                 "embed_workflow": (["true", "false"],),
                 "show_previews": (["true", "false"],),
+                "save_json": (["true", "false"])
             },
             "hidden": {
                 "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"
@@ -7098,7 +7099,7 @@ class WAS_Image_Save:
                         extension='png', quality=100, lossless_webp="false", prompt=None, extra_pnginfo=None, 
                         overwrite_mode='false', filename_number_padding=4, filename_number_start='false',
                         show_history='false', show_history_by_prefix="true", embed_workflow="true",
-                        show_previews="true"):
+                        show_previews="true",save_json="false"):
                         
         delimiter = filename_delimiter
         number_padding = filename_number_padding
@@ -7130,17 +7131,20 @@ class WAS_Image_Save:
                 cstr(f'The path `{output_path.strip()}` specified doesn\'t exist! Creating directory.').warning.print()
                 os.makedirs(output_path, exist_ok=True)
         
-        # Find existing counter values
-        if filename_number_start == 'true':
-            pattern = f"(\\d+){re.escape(delimiter)}{re.escape(filename_prefix)}"
+        if overwrite_mode == 'false':
+            # Find existing counter values
+            if filename_number_start == 'true':
+                pattern = f"(\\d+){re.escape(delimiter)}{re.escape(filename_prefix)}"
+            else:
+                pattern = f"{re.escape(filename_prefix)}{re.escape(delimiter)}(\\d+)"        
+            existing_counters = [
+                int(re.search(pattern, filename).group(1))
+                for filename in os.listdir(output_path)
+                if re.match(pattern, os.path.basename(filename))
+            ]
+            existing_counters.sort(reverse=True)
         else:
-            pattern = f"{re.escape(filename_prefix)}{re.escape(delimiter)}(\\d+)"
-        existing_counters = [
-            int(re.search(pattern, filename).group(1))
-            for filename in os.listdir(output_path)
-            if re.match(pattern, os.path.basename(filename))
-        ]
-        existing_counters.sort(reverse=True)
+            existing_counters = []
 
         # Set initial counter value
         if existing_counters:
@@ -7160,6 +7164,7 @@ class WAS_Image_Save:
             cstr(f"The extension `{extension}` is not valid. The valid formats are: {', '.join(sorted(ALLOWED_EXT))}").error.print()
             file_extension = "png"
 
+        saved_files = list()
         results = list()
         for image in images:
             i = 255. * image.cpu().numpy()
@@ -7202,6 +7207,10 @@ class WAS_Image_Save:
             # Save the images
             try:
                 output_file = os.path.abspath(os.path.join(output_path, file))
+
+                if save_json:
+                    saved_files.append(file)
+                    
                 if extension in ["jpg", "jpeg"]:
                     img.save(output_file,
                              quality=quality, optimize=True)
@@ -7240,8 +7249,14 @@ class WAS_Image_Save:
                 cstr('Unable to save file due to the to the following error:').error.print()
                 print(e)
             
-            if overwrite_mode == 'false':
+            if overwrite_mode != 'prefix_as_filename': 
                 counter += 1
+
+        if save_json:
+            json_output_file = os.path.abspath(os.path.join(output_path,f"{filename_prefix}.json"))
+            json_obj = { "count": len(saved_files) }
+            with open(json_output_file, "w") as outfile:
+                json.dump(json_obj, outfile)
 
         filtered_paths = []
         if show_history == 'true' and show_previews == 'true':
