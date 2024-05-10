@@ -7189,7 +7189,6 @@ class WAS_Image_Save:
             if not os.path.exists(output_path.strip()):
                 cstr(f'The path `{output_path.strip()}` specified doesn\'t exist! Creating directory.').warning.print()
                 os.makedirs(output_path, exist_ok=True)
-<<<<<<< HEAD
         
         if overwrite_mode == 'false':
             # Find existing counter values
@@ -7203,12 +7202,6 @@ class WAS_Image_Save:
                 if re.match(pattern, os.path.basename(filename))
             ]
             existing_counters.sort(reverse=True)
-=======
-
-        # Find existing counter values
-        if filename_number_start == 'true':
-            pattern = f"(\\d+){re.escape(delimiter)}{re.escape(filename_prefix)}"
->>>>>>> 6c3fed70655b737dc9b59da1cadb3c373c08d8ed
         else:
             existing_counters = []
 
@@ -7314,13 +7307,8 @@ class WAS_Image_Save:
             except Exception as e:
                 cstr('Unable to save file due to the to the following error:').error.print()
                 print(e)
-<<<<<<< HEAD
             
             if overwrite_mode != 'prefix_as_filename': 
-=======
-
-            if overwrite_mode == 'false':
->>>>>>> 6c3fed70655b737dc9b59da1cadb3c373c08d8ed
                 counter += 1
 
         if save_json:
